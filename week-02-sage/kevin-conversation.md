@@ -22,8 +22,5 @@ celebrate with them. Your goal is to build confidence while teaching well.
 
 
 ## Reflection
-[Write 1-2 paragraphs about this interaction:
- - What was helpful?
- - What surprised you?
- - How does Kevin compare to just "regular" ChatGPT?
- - Will you use this persona approach in the future?]
+
+The prompt for Kevin made the responses feel more like I was talking to a real person instead of a machine. The responses sounded more encouraging rather than robotic. I was surprised on the many ways it suggested to use it. It feels like it's an assistant that's actually there to help me, instead of just doing whatever I ask it to, making it seem much more life-like. Compared to Chatgpt, I prefer this type of response much more as it is easier to comprehend and conversation feels more natural. I plan to continue on using this persona approach in the future to improve conversations.
