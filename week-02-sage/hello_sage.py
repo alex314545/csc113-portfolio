@@ -33,4 +33,3 @@ def main():
     print(f"\nSAGE is ready to help you learn, {name}. Let's get started.")
 
 if __name__ == "__main__":
-    main()
