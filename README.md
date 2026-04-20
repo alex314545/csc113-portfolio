@@ -14,3 +14,33 @@
 
 **Questions I still have:**
 - What differs in the code from a general chatbot such as ChatGpt and a specific AI for problem-solving such as Claude?
+
+
+# BudgetBot MVP
+
+## What It Does
+Offers easy tracking of budget and spending. 
+
+## How to Use
+1. Log an Expense: Type something like "Spent $15 on lunch" or "Uber $22" and hit Enter.
+
+2. Set a Budget: Tell the bot your limits, such as "Set food budget $300".
+
+3. Check Status: Type "Status" to see visual spending breakdown and progress bars.
+
+4. Undo: Type "Undo" to remove the last entry.
+
+## Features Implemented
+- Setting Budgets
+- Checking category statuses
+- Logging expenses
+- Warning when you get close to  or exceed budget
+
+## Try It Yourself
+(https://alex314545.github.io/csc113-portfolio/)
+
+## What I Learned
+How helpful AI is in building simple programs. I was extremely surprised by the website that Gemini had built just given a few instructions.
+
+## Future Improvements
+A way to see the history of spending
