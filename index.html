@@ -15,7 +15,6 @@
             --accent: #e2e8f0;
             --success: #10b981;
             --warning: #f59e0b;
-            /* Category Colors */
             --food: #ef4444;
             --transport: #3b82f6;
             --entertainment: #a855f7;
@@ -36,7 +35,6 @@
             position: relative;
         }
 
-        /* --- Header & Instructions --- */
         header {
             padding: 16px 20px;
             background: white;
@@ -63,7 +61,6 @@
             line-height: 1.4;
         }
 
-        /* --- Chat Window --- */
         #chat-window {
             flex: 1;
             overflow-y: auto;
@@ -86,14 +83,12 @@
         .bot { align-self: flex-start; background: var(--bot-msg); border: 1px solid var(--accent); border-bottom-left-radius: 2px; }
         .user { align-self: flex-end; background: var(--user-msg); color: white; border-bottom-right-radius: 2px; }
 
-        /* --- Status Bars --- */
         .status-container { width: 100%; margin-top: 8px; }
         .progress-row { margin-bottom: 8px; }
         .progress-label { display: flex; justify-content: space-between; font-size: 11px; font-weight: 600; margin-bottom: 4px; text-transform: uppercase; }
         .progress-bar-bg { height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden; }
         .progress-bar-fill { height: 100%; transition: width 0.5s ease; }
 
-        /* --- Input Area --- */
         #controls { padding: 15px; border-top: 1px solid var(--accent); background: white; }
         #suggestions { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 12px; scrollbar-width: none; }
         #suggestions::-webkit-scrollbar { display: none; }
@@ -153,13 +148,27 @@
 
 <script>
     const CATEGORIES = {
-        food: { color: 'var(--food)', keywords: ['lunch', 'dinner', 'coffee', 'groceries', 'eat', 'pizza', 'mcdonalds', 'drink', 'food'] },
-        transport: { color: 'var(--transport)', keywords: ['uber', 'gas', 'bus', 'train', 'taxi', 'lyft', 'parking', 'fuel'] },
-        entertainment: { color: 'var(--entertainment)', keywords: ['movies', 'netflix', 'concert', 'gaming', 'steam', 'bar', 'party'] },
-        shopping: { color: 'var(--shopping)', keywords: ['amazon', 'clothes', 'shoes', 'gift', 'mall', 'target', 'store'] },
-        housing: { color: 'var(--housing)', keywords: ['rent', 'electric', 'water', 'wifi', 'utility', 'bill'] },
-        misc: { color: 'var(--misc)', keywords: [] }
+        food:          { color: 'var(--food)',          keywords: ['lunch', 'dinner', 'coffee', 'groceries', 'eat', 'pizza', 'mcdonalds', 'drink', 'food', 'breakfast', 'snack', 'restaurant'] },
+        transport:     { color: 'var(--transport)',     keywords: ['uber', 'gas', 'bus', 'train', 'taxi', 'lyft', 'parking', 'fuel', 'transport', 'subway', 'metro'] },
+        entertainment: { color: 'var(--entertainment)', keywords: ['movies', 'netflix', 'concert', 'gaming', 'steam', 'bar', 'party', 'entertainment', 'spotify', 'hulu', 'disney'] },
+        shopping:      { color: 'var(--shopping)',      keywords: ['amazon', 'clothes', 'shoes', 'gift', 'mall', 'target', 'store', 'shopping', 'walmart', 'purchase'] },
+        housing:       { color: 'var(--housing)',       keywords: ['rent', 'electric', 'water', 'wifi', 'utility', 'bill', 'housing', 'mortgage', 'internet', 'phone'] },
+        misc:          { color: 'var(--misc)',          keywords: [] }
     };
+
+    // ─── NEW: single source of truth for category detection ──────────────────
+    // Checks keywords for every category in definition order.
+    // Falls back to 'misc' if nothing matches.
+    function detectCategory(input) {
+        for (const [cat, data] of Object.entries(CATEGORIES)) {
+            if (cat === 'misc') continue; // skip misc — it's the fallback, not a match
+            if (data.keywords.some(k => input.includes(k))) {
+                return cat;
+            }
+        }
+        return 'misc';
+    }
+    // ─────────────────────────────────────────────────────────────────────────
 
     let state = JSON.parse(localStorage.getItem('budgetBot_v4')) || {
         expenses: [],
@@ -176,33 +185,25 @@
     function parseInput(text) {
         const input = text.toLowerCase();
         
-        // Command: Undo
         if (input === 'undo' || input.includes('remove last')) return { intent: 'UNDO' };
 
-        // Command: Status
         if (input.includes('status') || input.includes('show') || input.includes('breakdown') || input.includes('summary')) {
             return { intent: 'SUMMARY' };
         }
 
-        // Detect Numbers
-        const amountMatch = input.match(/\d+(\.\d{2})?/);
-        const amount = amountMatch ? parseFloat(amountMatch[0]) : null;
+        const amountMatch = input.match(/\$?\d+(\.\d{1,2})?/);
+        const amount = amountMatch ? parseFloat(amountMatch[0].replace('$', '')) : null;
 
-        // Command: Set Budget
         if (input.includes('budget')) {
-            const cat = Object.keys(CATEGORIES).find(c => input.includes(c)) || 'misc';
-            return { intent: 'SET_BUDGET', category: cat, amount };
+            // ─── FIXED: now uses detectCategory() instead of input.includes(c) ───
+            const category = detectCategory(input);
+            // ────────────────────────────────────────────────────────────────────
+            return { intent: 'SET_BUDGET', category, amount };
         }
 
-        // Command: Log Expense
         if (amount !== null) {
-            let category = 'misc';
-            for (const [cat, data] of Object.entries(CATEGORIES)) {
-                if (data.keywords.some(k => input.includes(k))) {
-                    category = cat;
-                    break;
-                }
-            }
+            // LOG already used the right approach — now both use detectCategory()
+            const category = detectCategory(input);
             return { intent: 'LOG', category, amount };
         }
 
@@ -257,8 +258,6 @@
                 state.expenses.push({ category: parsed.category, amount: parsed.amount, date: new Date() });
                 save();
                 let msg = `Logged $${parsed.amount.toFixed(2)} to ${parsed.category}.`;
-                
-                // Alert if over budget
                 const catTotal = state.expenses.filter(e => e.category === parsed.category).reduce((s,e)=>s+e.amount, 0);
                 if (state.budgets[parsed.category] && catTotal > state.budgets[parsed.category]) {
                     msg += `<br><span style="color:red">⚠️ Over budget for ${parsed.category}!</span>`;
