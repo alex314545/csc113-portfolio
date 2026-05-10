@@ -12,4 +12,4 @@ It's just a prototype for right now.
 
 What AI tools did you use? (Gemini, Claude, ChatGPT, Copilot, etc.)
 
-Claude
+Claude and Gemini
