@@ -1,0 +1,47 @@
+
+CRITICAL BUGS
+1. Budget-setting is broken for most categories.
+The budget parser does input.includes(c) against the raw input. "Set transport budget $100" will never match because the keyword is "transport" — but "Set entertainment budget" will falsely match "misc" first if you're unlucky with iteration order. Worse, "Set food budget $200" — the word "food" is in CATEGORIES, but the parser also checks for "budget" first, so it works... sometimes. It's completely dependent on JS object key iteration order, which is fragile.
+2. localStorage means nothing persists across users or devices.
+You're using localStorage as your data store. If the user opens the app on their phone after setting it up on desktop, all their data is gone. For anything called a "tracker," this is a fundamental UX failure.
+3. The amount regex is wrong.
+/\d+(\.\d{2})?/ only matches amounts with exactly two decimal places, or none. "$5.5" won't parse correctly — it'll grab "5" and drop the cents. "$5.50" works. "$5.5" silently truncates. Users will enter both.
+4. "Over budget" alert fires on the wrong total.
+You recalculate catTotal from ALL expenses ever — not the current month. Since there's no date filtering anywhere in the app, someone who's used this for 3 months will see "over budget" warnings constantly on tiny purchases because the lifetime total is enormous.
+
+LOGIC THAT MAKES NO SENSE
+5. There's no month concept, but it says "Monthly Progress."
+The summary is titled "Monthly Progress" and you call it a monthly tracker, but every expense ever logged is summed together with no filtering by month, week, or any time period. This is cosmetically a lie.
+6. Categories are determined by a keyword list, silently.
+If I type "Starbucks $6" — no keyword matches, so it logs to misc. The user has no idea why. There's no feedback saying "I categorized this as misc." The silent miscategorization will cause the summary to be wrong without the user ever knowing.
+7. handleSuggest just populates the input field — it doesn't submit.
+The chips say things like "📊 My Progress" but clicking them just puts text in the box. The user then has to manually hit Send. This is a confusing half-interaction. Either auto-submit or don't use button-styled chips.
+8. "Set monthly food budget $200" chip will fail.
+This is literally in your default chips. The word "monthly" is in the string, the parser checks input.includes('budget') ✓, then does Object.keys(CATEGORIES).find(c => input.includes(c)). "food" is in the string so it works — barely — but only because "food" happens to be a category key AND is in the chip text. This is accidental correctness, not designed behavior.
+
+CASES WHERE IT BREAKS
+9. $ is optional but misleading.
+"Dinner 25" works. "Dinner $25" works. But "I spent about $25 on dinner" — the regex finds "25," the keyword finds "dinner," so it works. But "I spent $25 on my friend's birthday dinner" — also works, but the user might not realize the app is parsing natural language this loosely. There's no confirmation of what was understood before logging.
+10. Undo only removes the last item, with no visibility.
+You can't see your expense history, so you have no idea what you're undoing. If you logged 5 things and want to remove the 3rd one, you're out of luck. "Undo" on a tracker with no history view is nearly useless.
+11. Categories with zero budget show empty progress bars.
+If no budget is set, percent = 0 and the bar is empty. But you still render a row for every category, including ones with $0 spent and no budget. The user sees 6 rows of flatlines for categories they've never used. Noise.
+12. No input validation on amounts.
+Type "Dinner $0" — it logs $0 to food. Type "Dinner $999999" — logged without question. Type "Dinner $abc" — the regex fails to match, falls through to UNKNOWN, and you get the error message. Fine, but there's no upper bound sanity check.
+
+ASSUMPTIONS THAT ARE WRONG
+13. You assume one user per browser.
+No login, no user ID, no way to share or export. Fine for a prototype, but you built budgets and expenses into localStorage with a hardcoded key budgetBot_v4 — if you update the app, you'll change the key and silently wipe everyone's data (you've already done this, hence _v4).
+14. You assume keywords cover real-world spending.
+"Chipotle $12" → misc. "Spotify $10" → misc. "H&M $45" → misc. "CVS $8" → misc. Most real purchases are brand names, not generic keywords. The category system fails the moment users type anything realistic.
+15. You assume the bot's parsing is obvious to users.
+There's no explanation of how categorization works. Users will be confused when "Lyft $18" goes to transport but "My Lyft ride $18" also works (because "lyft" is still a substring). But "My ride to work $18" goes to misc. The rules are invisible.
+
+UNFINISHED / HALF-BAKED
+16. There's no way to see, edit, or delete individual expenses. Only blind undo.
+17. There's no way to reset the month or clear history.
+18. There's no way to set budgets for multiple categories quickly — you have to send a separate message for each.
+19. The date field is saved on expenses but never used anywhere. Dead code.
+20. The bot's opening message says "tell me what you spent" but the only UI affordance is a text box — there's no example, no onboarding. First-time users who don't click "How to use?" will type something natural like "I spent $30 at Walmart" and probably get miscategorized silently.
+
+The core issue: this is a rule-based keyword parser dressed up as a conversational AI. The UX promises intelligence it doesn't have, which means users will be confused when it fails — and it will fail constantly on real inputs. Either lean into the simplicity (structured buttons, dropdowns, explicit forms) or actually use an LLM for parsing. The halfway point you're at now is the worst of both worlds.
